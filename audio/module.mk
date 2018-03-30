@@ -65,6 +65,9 @@ MODULE_OBJS += \
 	alsa_opl.o
 endif
 
+MODULE_OBJS += \
+	opl2arduino.o
+
 ifndef USE_ARM_SOUND_ASM
 MODULE_OBJS += \
 	rate.o

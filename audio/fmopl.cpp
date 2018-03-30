@@ -42,13 +42,18 @@ namespace ALSA {
 } // End of namespace ALSA
 #endif // USE_ALSA
 
+namespace OPL2Arduino {
+	OPL *create();
+} // End of namespace OPL2Arduino
+
 // Config implementation
 
 enum OplEmulator {
 	kAuto = 0,
 	kMame = 1,
 	kDOSBox = 2,
-	kALSA = 3
+	kALSA = 3,
+	kOPL2Arduino = 4
 };
 
 OPL::OPL() {
@@ -66,6 +71,7 @@ const Config::EmulatorDescription Config::_drivers[] = {
 #ifdef USE_ALSA
 	{ "alsa", _s("ALSA Direct FM"), kALSA, kFlagOpl2 | kFlagDualOpl2 | kFlagOpl3 },
 #endif
+	{ "opl2arduino", _s("OPL2 Arduino"), kOPL2Arduino, kFlagOpl2 },
 	{ 0, 0, 0, 0 }
 };
 
@@ -182,6 +188,13 @@ OPL *Config::create(DriverId driver, OplType type) {
 	case kALSA:
 		return ALSA::create(type);
 #endif
+
+	case kOPL2Arduino:
+		if (type == kOpl2)
+			return OPL2Arduino::create();
+		else
+			warning("OPL2Arduino only supports OPL2");
+		return 0;
 
 	default:
 		warning("Unsupported OPL emulator %d", driver);
