@@ -80,12 +80,11 @@ static void opl2arduino_write(int port, byte d, byte c) {
 		/* The command format is:
 		 *   - byte 1: register
 		 *   - byte 2: value
-		 *   - remaining: delay.
 		 *
 		 * No delay is needed because ScummVM takes care of them and
 		 * the code running on the Arduino already sleeps for 3.3 µs
 		 * and 24 µs. */
-		byte cmd[5] = {d, c, 0, 0, 0};
+		byte cmd[] = {d, c};
 		write(port, cmd, sizeof(cmd));
 	}
 }
@@ -125,7 +124,7 @@ static int opl2arduino_ack_thread(void *ptr) {
 static void opl2arduino_reset(int port) {
 	warning("OPL2Arduino: reset OPL2 chip");
 	if (port != -1) {
-		byte cmd[5] = {};
+		byte cmd[] = {0, 0};
 		write(port, cmd, sizeof(cmd));
 	}
 }
@@ -193,9 +192,9 @@ static int opl2arduino_init(const char *name, int *max_write) {
 		goto error;
 	}
 
-	// Send BUF? and wait for buffer size
+	// Send B0F? and wait for buffer size
 	*max_write = 0;
-	write(fd, "BUF?\n", 5);
+	write(fd, "B0F?\n", 5);
 	while (true) {
 		if (read(fd, &digit, 1) != 1) {
 			warning("OPL2Arduino: short read (2): %s",
@@ -213,7 +212,7 @@ static int opl2arduino_init(const char *name, int *max_write) {
 			goto error;
 		}
 	}
-	*max_write /= 5; // maximum number of commands we can pipeline
+	*max_write /= 2; // maximum number of commands we can pipeline
 	warning("OPL2Arduino: buffer is %d commands", *max_write);
 	return fd;
 error:
