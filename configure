@@ -134,7 +134,7 @@ _tremor=auto
 _tremolo=no
 _flac=auto
 _mad=auto
-_opl2lpt=no
+_opl2lpt=auto
 _alsa=auto
 _seq_midi=auto
 _sndio=auto
@@ -1053,7 +1053,7 @@ Optional Libraries:
   --disable-fluidsynth     disable fluidsynth MIDI driver [autodetect]
 
   --with-ieee1284-prefix=DIR prefix where libieee1284 is installed (optional)
-  --enable-opl2lpt         enable OPL2LPT support
+  --disable-opl2lpt         disable OPL2LPT/OPL3LPT support
 
   --with-sparkle-prefix=DIR    prefix where sparkle is installed
                            (OS X/Windows only - optional)
@@ -4058,8 +4058,8 @@ echo "$_tremor"
 #
 # Check for IEEE1284 for OPL2lPT
 #
-echocheck "OPL2LPT"
-if test "$_opl2lpt" = yes ; then
+echocheck "OPL2LPT/OPL3LPT"
+if test "$_opl2lpt" = auto ; then
 	_opl2lpt=no
 	cat > $TMPC << EOF
 #include <ieee1284.h>

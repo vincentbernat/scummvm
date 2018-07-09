@@ -138,6 +138,7 @@ static const char HELP_STRING[] =
 #endif
 #ifdef ENABLE_OPL2LPT
                                                                      ", opl2lpt"
+                                                                     ", opl3lpt"
 #endif
                                                                               ")\n"
 	"  --aspect-ratio           Enable aspect ratio correction\n"

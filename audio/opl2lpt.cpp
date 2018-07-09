@@ -40,12 +40,13 @@ namespace OPL2LPT {
 
 class OPL : public ::OPL::RealOPL {
 private:
+	Config::OplType _type;
 	struct parport *_pport;
 	int index;
-	static const uint8 ctrlBytes[];
+	static const uint8 ctrlBytes[][3];
 
 public:
-	OPL();
+	OPL(Config::OplType);
 	~OPL();
 
 	bool init();
@@ -57,17 +58,26 @@ public:
 	void writeReg(int r, int v);
 };
 
-const uint8 OPL::ctrlBytes[] = {
-	(C1284_NSELECTIN | C1284_NSTROBE | C1284_NINIT) ^ C1284_INVERTED,
-	(C1284_NSELECTIN | C1284_NSTROBE) ^ C1284_INVERTED,
-	(C1284_NSELECTIN | C1284_NSTROBE | C1284_NINIT) ^ C1284_INVERTED,
-
-	(C1284_NSELECTIN | C1284_NINIT) ^ C1284_INVERTED,
-	C1284_NSELECTIN ^ C1284_INVERTED,
-	(C1284_NSELECTIN | C1284_NINIT) ^ C1284_INVERTED
+#define CTRL_OPL_LEFT 0
+#define CTRL_OPL_RIGHT 1
+#define CTRL_OPL_DATA 2
+const uint8 OPL::ctrlBytes[][3] = {
+	{
+		(C1284_NSELECTIN | C1284_NSTROBE | C1284_NINIT) ^ C1284_INVERTED,
+		(C1284_NSELECTIN | C1284_NSTROBE) ^ C1284_INVERTED,
+		(C1284_NSELECTIN | C1284_NSTROBE | C1284_NINIT) ^ C1284_INVERTED,
+	}, {
+		(C1284_NSTROBE | C1284_NINIT) ^ C1284_INVERTED,
+		C1284_NSTROBE ^ C1284_INVERTED,
+		(C1284_NSTROBE | C1284_NINIT) ^ C1284_INVERTED,
+	}, {
+		(C1284_NSELECTIN | C1284_NINIT) ^ C1284_INVERTED,
+		C1284_NSELECTIN ^ C1284_INVERTED,
+		(C1284_NSELECTIN | C1284_NINIT) ^ C1284_INVERTED
+	}
 };
 
-OPL::OPL() : _pport(nullptr) {
+OPL::OPL(Config::OplType type) : _type(type), _pport(nullptr) {
 }
 
 OPL::~OPL() {
@@ -97,6 +107,7 @@ bool OPL::init() {
 			if (ieee1284_claim(_pport) != E1284_OK) {
 				warning("cannot claim parallel port %s", _pport->name);
 				ieee1284_close(_pport);
+				_pport = nullptr;
 				continue;
 			}
 			reset();
@@ -113,6 +124,8 @@ bool OPL::init() {
 void OPL::reset() {
 	for(int i = 0; i < 256; i ++) {
 		writeReg(i, 0);
+		if (_type == Config::kOpl3)
+			writeReg(i | 0x100, 0);
 	}
 	index = 0;
 }
@@ -121,33 +134,38 @@ void OPL::write(int port, int val) {
 	if (port & 1) {
 		writeReg(index, val);
 	} else {
-		index = val;
+		index = (val & 0xff) | ((port << 7) & 0x100);
 	}
 }
 
 byte OPL::read(int port) {
-	// No read support for the OPL2LPT
+	// No read support for the OPL2LPT/OPL3LPT
 	return 0;
 }
 
 void OPL::writeReg(int r, int v) {
-	r &= 0xff;
-	v &= 0xff;
-	ieee1284_write_data(_pport, r);
-	ieee1284_write_control(_pport, ctrlBytes[0]);
-	ieee1284_write_control(_pport, ctrlBytes[1]);
-	ieee1284_write_control(_pport, ctrlBytes[2]);
-	usleep(4);		// 3.3 us
+	if (_pport == nullptr) return;
+	ieee1284_write_data(_pport, r & 0xff);
+	if (r < 0x100) {
+		ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_LEFT][0]);
+		ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_LEFT][1]);
+		ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_LEFT][2]);
+	} else {
+		ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_RIGHT][0]);
+		ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_RIGHT][1]);
+		ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_RIGHT][2]);
+	}
+	if (_type == Config::kOpl2) usleep(4);		// 3.3 us
 
-	ieee1284_write_data(_pport, v);
-	ieee1284_write_control(_pport, ctrlBytes[3]);
-	ieee1284_write_control(_pport, ctrlBytes[4]);
-	ieee1284_write_control(_pport, ctrlBytes[5]);
-	usleep(23);
+	ieee1284_write_data(_pport, v & 0xff);
+	ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_DATA][0]);
+	ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_DATA][1]);
+	ieee1284_write_control(_pport, ctrlBytes[CTRL_OPL_DATA][2]);
+	if (_type == Config::kOpl2) usleep(23);
 }
 
-OPL *create() {
-	return new OPL();
+OPL *create(Config::OplType type) {
+	return new OPL(type);
 }
 
 } // End of namespace OPL2LPT
