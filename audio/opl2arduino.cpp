@@ -33,6 +33,7 @@
 #include "audio/fmopl.h"
 #include "SDL_thread.h"
 #include "SDL_mutex.h"
+#include "SDL_version.h"
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -251,7 +252,11 @@ bool OPL::init() {
 			opl2arduino_shutdown(port);
 			port = -1;
 		}
-		thread = SDL_CreateThread(opl2arduino_ack_thread, "OPL2 ack thread", this);
+#if SDL_VERSION_ATLEAST(2,0,0)
+			thread = SDL_CreateThread(opl2arduino_ack_thread, "OPL2 ack thread", this);
+#else
+			thread = SDL_CreateThread(opl2arduino_ack_thread, this);
+#endif
 		if (!thread) {
 			warning("OPL2Arduino: unable to create ack thread: %s",
 				SDL_GetError());
